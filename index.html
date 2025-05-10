@@ -1,1 +1,187 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ब्लॉग मंच</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.10/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      user-select: none; /* कॉपी को रोकने के लिए */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    .zoom-container {
+      transition: transform 0.2s;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div id="root"></div>
 
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const BlogPlatform = () => {
+      const [posts, setPosts] = useState([
+        {
+          id: 1,
+          title: "पहला ब्लॉग",
+          author: "लेखक 1",
+          content: "यह एक नमूना ब्लॉग पोस्ट है। यहाँ कुछ रोचक जानकारी है जो पाठकों के लिए उपयोगी हो सकती है।",
+          date: "2025-05-10",
+        },
+        {
+          id: 2,
+          title: "दूसरा ब्लॉग",
+          author: "लेखक 2",
+          content: "यह दूसरी पोस्ट है जिसमें विभिन्न विषयों पर चर्चा की गई है।",
+          date: "2025-05-09",
+        },
+      ]);
+      const [zoomLevel, setZoomLevel] = useState(1);
+      const [speakingPostId, setSpeakingPostId] = useState(null);
+      const [password, setPassword] = useState("");
+      const [showPasswordModal, setShowPasswordModal] = useState(null);
+
+      // कॉपी को रोकने के लिए
+      useEffect(() => {
+        const preventCopy = (e) => {
+          e.preventDefault();
+          alert("कॉपी करना प्रतिबंधित है!");
+        };
+        document.addEventListener("copy", preventCopy);
+        document.addEventListener("contextmenu", (e) => e.preventDefault());
+        return () => {
+          document.removeEventListener("copy", preventCopy);
+          document.removeEventListener("contextmenu", (e) => e.preventDefault());
+        };
+      }, []);
+
+      // टेक्स्ट-टू-स्पीच
+      const readPost = (postId, content) => {
+        if (speakingPostId === postId) {
+          window.speechSynthesis.cancel();
+          setSpeakingPostId(null);
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(content);
+        utterance.lang = "hi-IN";
+        utterance.rate = 1;
+        utterance.onend = () => setSpeakingPostId(null);
+        window.speechSynthesis.speak(utterance);
+        setSpeakingPostId(postId);
+      };
+
+      // ज़ूम नियंत्रण
+      const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.1, 2));
+      const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.1, 0.5));
+
+      // पोस्ट हटाना
+      const handleDelete = (postId) => {
+        if (password === "admin123") {
+          setPosts(posts.filter((post) => post.id !== postId));
+          setShowPasswordModal(null);
+          setPassword("");
+          alert("पोस्ट हटाई गई!");
+        } else {
+          alert("गलत पासवर्ड!");
+        }
+      };
+
+      return (
+        <div className="container mx-auto p-4 zoom-container" style={{ transform: `scale(${zoomLevel})` }}>
+          <h1 className="text-3xl font-bold text-center mb-6">ब्लॉग मंच</h1>
+
+          {/* ज़ूम नियंत्रण */}
+          <div className="flex justify-center mb-4">
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+              onClick={handleZoomIn}
+            >
+              ज़ूम इन
+            </button>
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+              onClick={handleZoomOut}
+            >
+              ज़ूम आउट
+            </button>
+          </div>
+
+          {/* ब्लॉग पोस्ट्स */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {posts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white p-4 rounded shadow hover:shadow-lg transition"
+              >
+                <h2 className="text-xl font-semibold">{post.title}</h2>
+                <p className="text-gray-600">लेखक: {post.author}</p>
+                <p className="text-gray-600">दिनांक: {post.date}</p>
+                <p className="mt-2">{post.content.slice(0, 100)}...</p>
+                <div className="mt-4 flex space-x-2">
+                  <button
+                    className={`px-4 py-2 rounded text-white ${
+                      speakingPostId === post.id ? "bg-red-500" : "bg-green-500"
+                    }`}
+                    onClick={() => readPost(post.id, post.content)}
+                  >
+                    {speakingPostId === post.id ? "रोकें" : "सुनें"}
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-4 py-2 rounded"
+                    onClick={() => setShowPasswordModal(post.id)}
+                  >
+                    हटाएँ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* पासवर्ड मॉडल */}
+          {showPasswordModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="bg-white p-6 rounded shadow-lg">
+                <h2 className="text-lg font-semibold mb-4">पासवर्ड दर्ज करें</h2>
+                <input
+                  type="password"
+                  className="border p-2 w-full mb-4"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="पासवर्ड"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    className="bg-gray-500 text-white px-4 py-2 rounded"
+                    onClick={() => {
+                      setShowPasswordModal(null);
+                      setPassword("");
+                    }}
+                  >
+                    रद्द करें
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-4 py-2 rounded"
+                    onClick={() => handleDelete(showPasswordModal)}
+                  >
+                    हटाएँ
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<BlogPlatform />, document.getElementById("root"));
+  </script>
+</body>
+</html>
